@@ -221,7 +221,7 @@ def Sumup_Each_Landuse_NTL(RasGDBpath, InGDBPath, StartYear, EndYear, Industrial
                     arcpy.TableToExcel_conversion(LUNTL_temp_table, BufferInterZonalPath + str(BufferShp) + '.xlsx')
                     print(str(BufferShp) + ' Zonal_as_table Done!')
             # 切换回栅格图层所在数据库
-            arcpy.env.workspace = RasGDBpath + gdbpath
+            arcpy.env.workspace = os.path.join(RasGDBpath, GdbPath)
 
 
 if __name__ == '__main__':
