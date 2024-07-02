@@ -1,6 +1,6 @@
 import arcpy
 import os
-import numpy as np
+
 OriginGlobalMonthlyDNB = r'E:/ShanghaiFactory/Monthcomposition/'
 AllgdbPath = r"E:/ShanghaiFactory/SHMonthlyCompositonGDB/"
 # projectFilepath = r'E:/ShanghaiFactory/sh_Local_Coordinate.prj'
