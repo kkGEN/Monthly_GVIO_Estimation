@@ -77,3 +77,4 @@ if __name__ == '__main__':
     ProcessGDBPath = os.path.join(rootPath, 'SHMonthlyCompositionGDB_Preprocessed/')
     # 执行Smooth_Monthly_DNB函数
     Process_2 = Smooth_Monthly_DNB(AllGDBPath, ProcessGDBPath)
+
