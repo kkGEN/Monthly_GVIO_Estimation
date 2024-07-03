@@ -2,7 +2,10 @@
 import fnmatch
 import arcpy
 import os
-from arcpy.sa import *
+import time
+import arcpy.da
+arcpy.CheckOutExtension("spatial")  # 权限检查
+arcpy.env.overwriteOutput = True
 
 def Judge_Extreme_NTL(inGDBpath, projectFilepath, outExcelPath, Buffersize, StartYear, EndYear, POI, OutshpPath):
     # 判断每个工厂的缓冲区内是否存在极端大的灯光值
@@ -14,6 +17,9 @@ def Judge_Extreme_NTL(inGDBpath, projectFilepath, outExcelPath, Buffersize, Star
     # StartYear：需处理数据的起始年份
     # EndYear：需处理数据的结束年份
 
+    # 输出函数开始执行时间
+    StartTime = time.strftime('%Y-%m-%d %H:%M:%S')
+    print("Start time is: {}".format(StartTime))
     for year in range(StartYear, EndYear):
         # 按照年份读取（经过平滑的）地区月度灯光数据，并以输入数据所在数据库为工作空间
         GdbPath = f"{year}.gdb"
@@ -76,7 +82,7 @@ def Judge_Extreme_NTL(inGDBpath, projectFilepath, outExcelPath, Buffersize, Star
                         break
                     else:
                         print('The ID %d is not matched!' % poibufferrow.ID)
-
+            POIbufferRows.clear()
             # 新生成的POI Buffer与zonal统计的结果连接，将连接后的buffer图层存入gdb，为后续identity和calculate geometry做准备
             SH_POI_Buffer_out = arcpy.CreateFeatureclass_management(OutshpPath, f"{Ras}MAXbuffer", "POLYGON")
             arcpy.Buffer_analysis(POI, SH_POI_Buffer_out, Buffersize)
@@ -90,6 +96,9 @@ def Judge_Extreme_NTL(inGDBpath, projectFilepath, outExcelPath, Buffersize, Star
             arcpy.Delete_management(POI_Buffer)
             arcpy.Delete_management(POIbuffer_temp_table)
             arcpy.Delete_management(POI_temp_table)
+    # 输出函数结束时间
+    EndTime = time.strftime('%Y-%m-%d %H:%M:%S')
+    print("End time is: {}".format(EndTime))
     return
 
 def Check_GDBPath_Exist(GDBFullPath, GDBFolder, GDBName):
@@ -102,38 +111,46 @@ def Check_GDBPath_Exist(GDBFullPath, GDBFolder, GDBName):
             # 打印错误信息
             print(arcpy.GetMessages(2))
     return
+
 def Check_FolderPath_Exist(outFolderPath):
     if not os.path.exists(outFolderPath):
         os.makedirs(outFolderPath)
         print(f'{outFolderPath} is created successflly!')
     return
 
-def Sumup_Each_Landuse_NTL(RasGDBpath, InGDBPath, BuffInterPath, BuffInterF2PPath, StartYear, EndYear, Industrial):
+def Sumup_Each_Landuse_NTL(RasGDBpath, InGDBPath, BuffInterPath, BuffInterF2PPath,
+                           BuffInterExcelPath,BuffInterF2PExcelPath, StartYear, EndYear, Industrial):
     # RasGDBpath：灯光数据数据库GDB
     # InGDBPath: 存储工厂缓冲区矢量范围的GDB
     # StartYear:
     # EndYear:
     # Industrial: Euluc土地利用矢量
 
-
+    # 输出函数开始执行时间
+    StartTime = time.strftime('%Y-%m-%d %H:%M:%S')
+    print("Start time is:{}".format(StartTime))
     # 循环打开每年的月合成灯光数据库
     for year in range(StartYear, EndYear):
         GdbPath = f"{year}.gdb"
-        arcpy.env.workspace = os.path.join(RasGDBpath, GdbPath)
+        OriginalRasGDB = os.path.join(RasGDBpath, GdbPath)
+        # 确保初始数据库是在栅格灯光数据中
+        arcpy.env.workspace = OriginalRasGDB
         # 打开每月的灯光栅格影像
         for ras in arcpy.ListRasters():
-            rasSH = arcpy.Raster(ras)
-            # 列出带缓冲区的工厂POI图层
+            Ras = arcpy.Raster(ras)
+            # 切换到工厂缓冲区矢量数据库，列出带缓冲区的工厂POI图层
             arcpy.env.workspace = InGDBPath
             arcpy.env.overwriteOutput = True
             BufferShpList = arcpy.ListFeatureClasses()
             for BufferShp in BufferShpList:
-                if f'{rasSH}' in BufferShp:
+                if f'{Ras}' in BufferShp:
                     # 输出buffer与EULUC相交的结果
-                    BufferInterOutPath = os.path.join(BufferIntersectPath, f'{BufferShp}_Intersect')
-                    arcpy.Intersect_analysis([[BufferShp, 1], [Industrial, 2]], BufferInterOutPath, "ALL")
-                    print(f'{BufferShp}_inter is done!')
-
+                    BufferInterOutPath = os.path.join(BuffInterPath, f'{BufferShp}_Intersect')
+                    if arcpy.Exists(BufferInterOutPath):
+                        print(f'{BufferShp}_inter exists!')
+                    else:
+                        arcpy.Intersect_analysis([[BufferShp, 1], [Industrial, 2]], BufferInterOutPath, "ALL")
+                        print(f'{BufferShp}_inter is done!')
                     # 为相交处理后的矢量图层增加主键字段，方便后续的字段计算
                     # 判断"BufferInterID"是否存在，不存在则新建
                     field_to_check = "BufferInterID"
@@ -142,44 +159,69 @@ def Sumup_Each_Landuse_NTL(RasGDBpath, InGDBPath, BuffInterPath, BuffInterF2PPat
                     field_exists = next((True for field in fields if field.name == field_to_check), False)
                     if not field_exists:
                         arcpy.AddField_management(BufferInterOutPath, field_to_check, 'LONG', 9)
-                        print(f"Field '{field_to_check}' not exist, added now!")
+                        print(f"Field '{field_to_check}' is not exist, added now!")
                     else:
                         print(f"Field '{field_to_check}' already exists!")
-                    # 计算
-                    expression = 'Increment()'
-                    codeblock = '''
-                        rec = 0
-                        def Increment():
-                            global rec
-                            Start=1
-                            Interval=1
-                            if(rec == 0):
-                                rec=Start
-                            else:
-                                rec=rec+Interval
-                            return rec
-                        '''
-                    arcpy.CalculateField_management(BufferInterOutPath, 'BufferInterID', expression, "PYTHON3", codeblock)
+                    # 为新增的BufferInterID字段进行赋值，按照升序依次编号
+                    IDCount = 1
+                    IntersectRows = arcpy.UpdateCursor(BufferInterOutPath, [field_to_check])
+                    while True:
+                        interrow = IntersectRows.next()
+                        if not interrow:
+                            break
+                        interrow.setValue(field_to_check, IDCount)
+                        IntersectRows.updateRow(interrow)
+                        IDCount += 1
+                    print(f"{BufferShp} attribute: '{field_to_check}' assigned successfuly!")
+                    # <<with 方法在处理游标之类需要处理内存的数据类型时更优，但是目前报错：AttributeError: __enter__，
+                    # 通常在 ArcPy 中，arcpy.da.UpdateCursor 和 arcpy.da.SearchCursor 都是可以用于 with 语句的上下文管理器，
+                    # 可能由于arcpy版本不适配，或者arcpy.da没有正确导入>>
+                    # with arcpy.UpdateCursor(BufferInterOutPath, [f'{field_to_check}']) as cursor:
+                    #     for row in cursor:
+                    #         # 按照递增的顺序设置新字段的值
+                    #         row.setValue(field_to_check, IDCount)
+                    #         cursor.updateRow(row)
+                    #         IDCount += 1
 
                     # 筛选面积大于3E-06的斑块，并输出为excel
-                    arcpy.MakeFeatureLayer_management(BufferInterOutPath, "lyr")
-                    arcpy.SelectLayerByAttribute_management("lyr", "NEW_SELECTION", "Shape_Area >= 3E-06")
-                    arcpy.TableToExcel_conversion("lyr", f'{BuffInterPath}{BufferShp}.xlsx')
+                    # 复制一个当前BufferInter图层的内存版本，只保留部分字段，且面积大于或等于 0.000003 平方单位的要素
+                    # SelectedBufInte = "SelectedBufferInter"
+                    WhereClauseArea = "Shape_Area >= 3E-06"
+                    SecletedFiled = ['ID', 'BUFF_DIST', 'MAX', 'MAXNTLCheck', 'BufferMAX',
+                                     'Lon', 'Lat', 'Level1', 'Level2', 'Shape_Area', 'BufferInterID']
+                    FieldInfo = arcpy.FieldInfo()
+                    FieldsInBuffInte = arcpy.ListFields(BufferInterOutPath)
+                    for fieldbuffinte in FieldsInBuffInte:
+                        if fieldbuffinte.name in SecletedFiled:
+                            FieldInfo.addField(fieldbuffinte.name, fieldbuffinte.name, "VISIBLE", "NONE")
+                        else:
+                            FieldInfo.addField(fieldbuffinte.name, fieldbuffinte.name, "HIDDEN", "NONE")
+                    arcpy.MakeFeatureLayer_management(BufferInterOutPath, "SelectedBufferInter", where_clause=WhereClauseArea, field_info=FieldInfo)
+
+                    outInterExcelName = os.path.join(BuffInterExcelPath, f'{BufferShp}.xlsx')
+                    arcpy.TableToExcel_conversion("SelectedBufferInter", outInterExcelName)
                     print(f'{BufferShp} Intersect Done!')
 
-                    # 将添加主键后的矢量图层转换为点Points
-                    BuffInterF2POutPath = f'{BuffInterF2PPath}{BufferShp}Inter_F2P'
-                    # 将按面积筛选的BufferIntersect图层转换为点
-                    arcpy.FeatureToPoint_management("lyr", BuffInterF2POutPath)
+                    # 将添加主键后的矢量，并且按面积筛选的BufferIntersect图层转换为点（Points）
+                    BuffInterF2POutPath = os.path.join(BuffInterF2PPath, f'{BufferShp}Inter_F2P')
+                    arcpy.FeatureToPoint_management("SelectedBufferInter", BuffInterF2POutPath)
                     print(f'{BufferShp} Feature_to_Point Done!')
 
-                    # 根据土地利用类型算后的斑块面积总和
+                    # (临时文件)根据土地利用类型算后的斑块面积总和
                     LUNTL_Temp_table = arcpy.CreateScratchName("SH_POItable", data_type="Table", workspace="in_memory")
-                    arcpy.sa.ZonalStatisticsAsTable(BuffInterF2POutPath, 'BufferInterID', rasSH, LUNTL_Temp_table)
-                    arcpy.TableToExcel_conversion(LUNTL_Temp_table, BufferInterZonalPath + str(BufferShp) + '.xlsx')
+                    OrigRas =arcpy.Raster( os.path.join(OriginalRasGDB, ras))
+                    arcpy.sa.ZonalStatisticsAsTable(BuffInterF2POutPath, 'BufferInterID', OrigRas, LUNTL_Temp_table)
+                    outInterF2PExcelName = os.path.join(BuffInterF2PExcelPath, f'{BufferShp}.xlsx')
+                    arcpy.TableToExcel_conversion(LUNTL_Temp_table, outInterF2PExcelName)
+                    arcpy.Delete_management(LUNTL_Temp_table)
                     print(f'{BufferShp} Zonal_as_table Done!')
             # 切换回栅格图层所在数据库
-            arcpy.env.workspace = os.path.join(RasGDBpath, GdbPath)
+            arcpy.env.workspace = OriginalRasGDB
+
+    # 输出函数结束时间
+    EndTime = time.strftime('%Y-%m-%d %H:%M:%S')
+    print("End time is:{}".format(EndTime))
+    return
 
 
 if __name__ == '__main__':
@@ -203,8 +245,8 @@ if __name__ == '__main__':
     Check_GDBPath_Exist(BufferGDBPath, Judge_ExtreNTL_Folder, BufferGDBName)  # 检查路径是否存在，不存在则新建
 
     # 执行Judge_Extreme_NTL函数
-    Process_3 = Judge_Extreme_NTL(ProcessGDBPath, ProjectFilePath, outExcelFolderPath, BufferSize,
-                                  StartYear, EndYear, POIsIndustrialPath, BufferGDBPath)
+    # Process_3 = Judge_Extreme_NTL(ProcessGDBPath, ProjectFilePath, outExcelFolderPath, BufferSize,
+    #                               StartYear, EndYear, POIsIndustrialPath, BufferGDBPath)
 
     # 自定义Sumup_Each_Landuse_NTL函数的输入参数：
     Sumup_Each_Landuse_NTL_Folder = os.path.join(outPath, 'Step02_Sumup_Each_Landuse_NTL/')
@@ -218,12 +260,13 @@ if __name__ == '__main__':
     EulucPath = os.path.join(rootPath, '上海基础空间数据/Shanghai_Euluc_2018.shp')
     # 存放Intersect后的GDB路径
     BufferIntersectGDBName = f'Sumup_Each_Landuse_NTL_BufInte_{BufferSize}.gdb'
-    BufferIntersectPath = os.path.join(Sumup_Each_Landuse_NTL_Folder, BufferIntersectGDBName)
-    Check_GDBPath_Exist(BufferIntersectPath, Sumup_Each_Landuse_NTL_Folder, BufferIntersectGDBName)
+    outBufferIntersectPath = os.path.join(Sumup_Each_Landuse_NTL_Folder, BufferIntersectGDBName)
+    Check_GDBPath_Exist(outBufferIntersectPath, Sumup_Each_Landuse_NTL_Folder, BufferIntersectGDBName)
     # 存放Intersect后并FeatureToPoints的GDB路径
     BufferInterFeature2PointName = f'Sumup_Each_Landuse_NTL_BufInteF2P_{BufferSize}.gdb'
-    BufferInterFeature2PointPath = os.path.join(Sumup_Each_Landuse_NTL_Folder, BufferInterFeature2PointName)
-    Check_GDBPath_Exist(BufferInterFeature2PointPath, Sumup_Each_Landuse_NTL_Folder, BufferInterFeature2PointName)
+    outBufferInterFeature2PointPath = os.path.join(Sumup_Each_Landuse_NTL_Folder, BufferInterFeature2PointName)
+    Check_GDBPath_Exist(outBufferInterFeature2PointPath, Sumup_Each_Landuse_NTL_Folder, BufferInterFeature2PointName)
     # 执行Sumup_Each_Landuse_NTL函数
-    # Process_4 = Sumup_Each_Landuse_NTL(ProcessGDBPath, BufferGDBPath, BufferIntersectPath,
-    #                                    BufferInterFeature2PointPath, StartYear, EndYear, EulucPath)
+    Process_4 = Sumup_Each_Landuse_NTL(ProcessGDBPath, BufferGDBPath, outBufferIntersectPath,
+                                       outBufferInterFeature2PointPath, OutInteExcelPath, OutInteF2PExcelPath,
+                                       StartYear, EndYear, EulucPath)
