@@ -1,11 +1,14 @@
 # -*- coding: UTF-8 -*-
-import fnmatch
 import arcpy
 import os
 import time
 import arcpy.da
 arcpy.CheckOutExtension("spatial")  # 权限检查
 arcpy.env.overwriteOutput = True
+
+def Timestamp():
+    CurrentTime = time.strftime('%Y-%m-%d %H:%M:%S')
+    return CurrentTime
 
 def Judge_Extreme_NTL(inGDBpath, projectFilepath, outExcelPath, Buffersize, StartYear, EndYear, POI, OutshpPath):
     # 判断每个工厂的缓冲区内是否存在极端大的灯光值
@@ -18,8 +21,7 @@ def Judge_Extreme_NTL(inGDBpath, projectFilepath, outExcelPath, Buffersize, Star
     # EndYear：需处理数据的结束年份
 
     # 输出函数开始执行时间
-    StartTime = time.strftime('%Y-%m-%d %H:%M:%S')
-    print("Start time is: {}".format(StartTime))
+    print("Start time is: {}".format(Timestamp()))
     for year in range(StartYear, EndYear):
         # 按照年份读取（经过平滑的）地区月度灯光数据，并以输入数据所在数据库为工作空间
         GdbPath = f"{year}.gdb"
@@ -97,8 +99,7 @@ def Judge_Extreme_NTL(inGDBpath, projectFilepath, outExcelPath, Buffersize, Star
             arcpy.Delete_management(POIbuffer_temp_table)
             arcpy.Delete_management(POI_temp_table)
     # 输出函数结束时间
-    EndTime = time.strftime('%Y-%m-%d %H:%M:%S')
-    print("End time is: {}".format(EndTime))
+    print("End time is: {}".format(Timestamp()))
     return
 
 def Check_GDBPath_Exist(GDBFullPath, GDBFolder, GDBName):
@@ -106,7 +107,7 @@ def Check_GDBPath_Exist(GDBFullPath, GDBFolder, GDBName):
     if not os.path.exists(GDBFullPath):
         try:
             arcpy.CreateFileGDB_management(GDBFolder, GDBName)
-            print(f"{GDBFullPath} is created successflly!")
+            print(f"{GDBFullPath} is created successfully!")
         except arcpy.ExecuteError:
             # 打印错误信息
             print(arcpy.GetMessages(2))
@@ -115,7 +116,7 @@ def Check_GDBPath_Exist(GDBFullPath, GDBFolder, GDBName):
 def Check_FolderPath_Exist(outFolderPath):
     if not os.path.exists(outFolderPath):
         os.makedirs(outFolderPath)
-        print(f'{outFolderPath} is created successflly!')
+        print(f'{outFolderPath} is created successfully!')
     return
 
 def Sumup_Each_Landuse_NTL(RasGDBpath, InGDBPath, BuffInterPath, BuffInterF2PPath,
@@ -127,8 +128,7 @@ def Sumup_Each_Landuse_NTL(RasGDBpath, InGDBPath, BuffInterPath, BuffInterF2PPat
     # Industrial: Euluc土地利用矢量
 
     # 输出函数开始执行时间
-    StartTime = time.strftime('%Y-%m-%d %H:%M:%S')
-    print("Start time is:{}".format(StartTime))
+    print("Start time is:{}".format(Timestamp()))
     # 循环打开每年的月合成灯光数据库
     for year in range(StartYear, EndYear):
         GdbPath = f"{year}.gdb"
@@ -172,7 +172,7 @@ def Sumup_Each_Landuse_NTL(RasGDBpath, InGDBPath, BuffInterPath, BuffInterF2PPat
                         interrow.setValue(field_to_check, IDCount)
                         IntersectRows.updateRow(interrow)
                         IDCount += 1
-                    print(f"{BufferShp} attribute: '{field_to_check}' assigned successfuly!")
+                    print(f"{BufferShp} attribute: '{field_to_check}' assigned successfully!")
                     # <<with 方法在处理游标之类需要处理内存的数据类型时更优，但是目前报错：AttributeError: __enter__，
                     # 通常在 ArcPy 中，arcpy.da.UpdateCursor 和 arcpy.da.SearchCursor 都是可以用于 with 语句的上下文管理器，
                     # 可能由于arcpy版本不适配，或者arcpy.da没有正确导入>>
@@ -219,8 +219,7 @@ def Sumup_Each_Landuse_NTL(RasGDBpath, InGDBPath, BuffInterPath, BuffInterF2PPat
             arcpy.env.workspace = OriginalRasGDB
 
     # 输出函数结束时间
-    EndTime = time.strftime('%Y-%m-%d %H:%M:%S')
-    print("End time is:{}".format(EndTime))
+    print("End time is:{}".format(Timestamp()))
     return
 
 
@@ -229,6 +228,7 @@ if __name__ == '__main__':
     outPath = r'E:/ShanghaiFactory/Shanghai_Final/'
     StartYear = 2014
     EndYear = 2023
+    BufferSize = '1500 METERS'  # <<Caution!!!>> 缓冲区的距离，这是一个可变参数，可选500m,1000m,1500m,2000m
 
     # 自定义Judge_ExtremeNTL函数的输入参数：
     Judge_ExtreNTL_Folder = os.path.join(outPath, 'Step01_Judge_Extreme_NTL/')
@@ -236,7 +236,6 @@ if __name__ == '__main__':
     POIsIndustrialPath = os.path.join(rootPath, '上海基础空间数据/Shanghai_POI_Industrial.shp')
     ProcessGDBPath = os.path.join(rootPath, 'SHMonthlyCompositionGDB_Preprocessed/')
 
-    BufferSize = '1500 METERS'  # <<Caution!!!>> 缓冲区的距离，这是一个可变参数，可选500m,1000m,1500m,2000m
     # 存放Buffer之后的excel版本
     outExcelFolderPath = os.path.join(Judge_ExtreNTL_Folder, f'Judge_Extreme_NTL_{BufferSize}')
     Check_FolderPath_Exist(outExcelFolderPath)
