@@ -2,7 +2,8 @@
 import os
 import time
 import pandas as pd
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+import numpy as np
+from concurrent.futures import ProcessPoolExecutor
 
 def Check_FolderPath_Exist(outFolderPath):
     if not os.path.exists(outFolderPath):
@@ -118,7 +119,44 @@ def Find_MaxNTl_and_Greater20_Landuse(CleanedExcelPath, OutExcelpath):
     print("End time is:{}".format(Timestamp()))
     return
 
+def Shift_Data_to_CNN_Shape(folderpath, outfilepath):
+    # 把原始的长条数据reshape变为方便CNN处理的方形数据
+    # folderpath：经过地理处理后的各土地利用类型下的灯光强度矩阵
+    # outfilepath：满足CNN输入数据的输出路径
 
+    # 输出函数开始执行时间
+    print("Start time is:{}".format(Timestamp()))
+
+    files = os.listdir(folderpath)
+    for filename in files:
+        df_all = pd.read_excel(os.path.join(folderpath, filename))
+        df_all = df_all.iloc[:, 1:17]
+        # 计算原始df的列数和大小，存储列名
+        df_cols = df_all.shape[1]
+        df_size = df_all.size
+        df_colnames = df_all.columns
+        # 计算新的方形矩阵的边长（向上取整）
+        side_length = int(np.ceil(np.sqrt(df_size)))
+        if side_length % 2 != 0:
+            side_length += 1
+        # 计算需要填充的零的数量
+        num_rows_to_add = int((side_length * side_length - df_size) / df_cols)
+        zero_rows = pd.DataFrame(np.zeros((num_rows_to_add, df_cols)), columns=df_colnames)
+        # 在数组的末尾添加零
+        df_all_with_zeros = pd.concat([df_all, zero_rows], ignore_index=True)
+        array_data = df_all_with_zeros.values
+        # 重塑数组为方形
+        reshaped_array = array_data.reshape((side_length, side_length))
+
+        # #填补空缺和零值为0.001
+        reshaped_df = pd.DataFrame(reshaped_array)
+        reshaped_df_out = reshaped_df.replace(0, 0.0001)
+        reshaped_df_out.to_excel(os.path.join(outfilepath, filename), header=None, index=False)
+        print(f"{filename} has been processed successfully!")
+
+    # 输出函数结束时间
+    print("End time is:{}".format(Timestamp()))
+    return
 
 if __name__ == "__main__":
     outPath = r'E:/ShanghaiFactory/Shanghai_Final/'
@@ -134,6 +172,7 @@ if __name__ == "__main__":
     Filenames = os.listdir(OutInteExcelPath)
     # 自定义线程的数量
     MaxWorks = 10
+    # Process_5
     # with ProcessPoolExecutor(max_workers=MaxWorks) as executor:
     #     # 将 OutInteExcelPath, OutInteF2PExcelPath, OutMergedBufInteExcelPath 作为额外参数传递给 Merge_Buf_BufInte_Excel 函数
     #     executor.map(Merge_Buf_BufInte_Excel, [OutInteExcelPath] * len(Filenames),
@@ -143,7 +182,7 @@ if __name__ == "__main__":
     ProcessFiles = os.listdir(OutMergedBufInteExcelPath)
     OutCleanedExcelPath = os.path.join(Landuse_NTL_ExcelProcess_Folder, f'Landuse_NTL_Sumup_Cleaned_{BufferSize}')
     Check_FolderPath_Exist(OutCleanedExcelPath)
-    # 使用 ProcessPoolExecutor 创建线程池，可以指定线程数量
+    # Process_6
     # with ProcessPoolExecutor(max_workers=MaxWorks) as executor:
     #     executor.map(Sumup_NTL_Dependon_Landuse, [OutMergedBufInteExcelPath] * len(ProcessFiles),
     #                  [OutCleanedExcelPath] * len(ProcessFiles), ProcessFiles)
@@ -151,4 +190,11 @@ if __name__ == "__main__":
     # 自定义Find_MaxNTl_and_Greater20_Landuse函数的输入参数：
     OutCheckedMaxExcelPath = os.path.join(Landuse_NTL_ExcelProcess_Folder, f'Landuse_NTL_Sumup_ChecekedMax_{BufferSize}')
     Check_FolderPath_Exist(OutCheckedMaxExcelPath)
-    Find_MaxNTl_and_Greater20_Landuse(OutCleanedExcelPath, OutCheckedMaxExcelPath)
+    # 执行Find_MaxNTl_and_Greater20_Landuse函数
+    # Process_7 = Find_MaxNTl_and_Greater20_Landuse(OutCleanedExcelPath, OutCheckedMaxExcelPath)
+
+    # 自定义Shift_Data_to_CNN_Shape函数的输入参数：
+    OutShiftDataCNNExcelPath = os.path.join(Landuse_NTL_ExcelProcess_Folder, f'Landuse_NTL_CNNdata_{BufferSize}')
+    Check_FolderPath_Exist(OutShiftDataCNNExcelPath)
+    Process_8 = Shift_Data_to_CNN_Shape(OutCheckedMaxExcelPath, OutShiftDataCNNExcelPath)
+
