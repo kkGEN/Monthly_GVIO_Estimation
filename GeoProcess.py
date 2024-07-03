@@ -10,7 +10,7 @@ def Timestamp():
     CurrentTime = time.strftime('%Y-%m-%d %H:%M:%S')
     return CurrentTime
 
-def Judge_Extreme_NTL(inGDBpath, projectFilepath, outExcelPath, Buffersize, StartYear, EndYear, POI, OutshpPath):
+def Judge_Extreme_NTL(inGDBpath, outExcelPath, Buffersize, StartYear, EndYear, POI, OutshpPath):
     # 判断每个工厂的缓冲区内是否存在极端大的灯光值
     # inGDBpath: 要处理的原始数据的GDB数据库路径集合
     # outExcelPath: 每一个缓冲区距离下的输出excel存储文件夹路径
@@ -84,7 +84,7 @@ def Judge_Extreme_NTL(inGDBpath, projectFilepath, outExcelPath, Buffersize, Star
                         break
                     else:
                         print('The ID %d is not matched!' % poibufferrow.ID)
-            POIbufferRows.clear()
+            # POIbufferRows.clear()
             # 新生成的POI Buffer与zonal统计的结果连接，将连接后的buffer图层存入gdb，为后续identity和calculate geometry做准备
             SH_POI_Buffer_out = arcpy.CreateFeatureclass_management(OutshpPath, f"{Ras}MAXbuffer", "POLYGON")
             arcpy.Buffer_analysis(POI, SH_POI_Buffer_out, Buffersize)
@@ -228,11 +228,10 @@ if __name__ == '__main__':
     outPath = r'E:/ShanghaiFactory/Shanghai_Final/'
     StartYear = 2014
     EndYear = 2023
-    BufferSize = '1500 METERS'  # <<Caution!!!>> 缓冲区的距离，这是一个可变参数，可选500m,1000m,1500m,2000m
+    BufferSize = '500 METERS'  # <<Caution!!!>> 缓冲区的距离，这是一个可变参数，可选500m,1000m,1500m,2000m
 
     # 自定义Judge_ExtremeNTL函数的输入参数：
     Judge_ExtreNTL_Folder = os.path.join(outPath, 'Step01_Judge_Extreme_NTL/')
-    ProjectFilePath = os.path.join(rootPath, 'sh_Local_Coordinate.prj')
     POIsIndustrialPath = os.path.join(rootPath, '上海基础空间数据/Shanghai_POI_Industrial.shp')
     ProcessGDBPath = os.path.join(rootPath, 'SHMonthlyCompositionGDB_Preprocessed/')
 
@@ -244,8 +243,8 @@ if __name__ == '__main__':
     Check_GDBPath_Exist(BufferGDBPath, Judge_ExtreNTL_Folder, BufferGDBName)  # 检查路径是否存在，不存在则新建
 
     # 执行Judge_Extreme_NTL函数
-    # Process_3 = Judge_Extreme_NTL(ProcessGDBPath, ProjectFilePath, outExcelFolderPath, BufferSize,
-    #                               StartYear, EndYear, POIsIndustrialPath, BufferGDBPath)
+    Process_3 = Judge_Extreme_NTL(ProcessGDBPath, outExcelFolderPath, BufferSize,
+                                  StartYear, EndYear, POIsIndustrialPath, BufferGDBPath)
 
     # 自定义Sumup_Each_Landuse_NTL函数的输入参数：
     Sumup_Each_Landuse_NTL_Folder = os.path.join(outPath, 'Step02_Sumup_Each_Landuse_NTL/')
