@@ -69,7 +69,7 @@ if __name__ == '__main__':
     AllGDBPath = os.path.join(rootPath, 'SHMonthlyCompositonGDB/')
     ShapeFilePath = os.path.join(rootPath, '上海基础空间数据/ShanghaiBous.shp')
     StartYear = 2014
-    EndYear = 2015
+    EndYear = 2023
     # 执行Extract_Local_Monthly_DNB函数
     Process_1 = Extract_Local_Monthly_DNB(OriginGlobalMonthlyDNB, AllGDBPath, StartYear, EndYear, ShapeFilePath)
 
