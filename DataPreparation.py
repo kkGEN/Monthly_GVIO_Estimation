@@ -173,25 +173,25 @@ if __name__ == "__main__":
     # 自定义线程的数量
     MaxWorks = 10
     # Process_5
-    # with ProcessPoolExecutor(max_workers=MaxWorks) as executor:
-    #     # 将 OutInteExcelPath, OutInteF2PExcelPath, OutMergedBufInteExcelPath 作为额外参数传递给 Merge_Buf_BufInte_Excel 函数
-    #     executor.map(Merge_Buf_BufInte_Excel, [OutInteExcelPath] * len(Filenames),
-    #                  [OutInteF2PExcelPath] * len(Filenames), [OutMergedBufInteExcelPath] * len(Filenames), Filenames)
+    with ProcessPoolExecutor(max_workers=MaxWorks) as executor:
+        # 将 OutInteExcelPath, OutInteF2PExcelPath, OutMergedBufInteExcelPath 作为额外参数传递给 Merge_Buf_BufInte_Excel 函数
+        executor.map(Merge_Buf_BufInte_Excel, [OutInteExcelPath] * len(Filenames),
+                     [OutInteF2PExcelPath] * len(Filenames), [OutMergedBufInteExcelPath] * len(Filenames), Filenames)
 
     # 自定义Sumup_NTL_Dependon_Landuse函数的输入参数：
     ProcessFiles = os.listdir(OutMergedBufInteExcelPath)
     OutCleanedExcelPath = os.path.join(Landuse_NTL_ExcelProcess_Folder, f'Landuse_NTL_Sumup_Cleaned_{BufferSize}')
     Check_FolderPath_Exist(OutCleanedExcelPath)
     # Process_6
-    # with ProcessPoolExecutor(max_workers=MaxWorks) as executor:
-    #     executor.map(Sumup_NTL_Dependon_Landuse, [OutMergedBufInteExcelPath] * len(ProcessFiles),
-    #                  [OutCleanedExcelPath] * len(ProcessFiles), ProcessFiles)
+    with ProcessPoolExecutor(max_workers=MaxWorks) as executor:
+        executor.map(Sumup_NTL_Dependon_Landuse, [OutMergedBufInteExcelPath] * len(ProcessFiles),
+                     [OutCleanedExcelPath] * len(ProcessFiles), ProcessFiles)
 
     # 自定义Find_MaxNTl_and_Greater20_Landuse函数的输入参数：
     OutCheckedMaxExcelPath = os.path.join(Landuse_NTL_ExcelProcess_Folder, f'Landuse_NTL_Sumup_ChecekedMax_{BufferSize}')
     Check_FolderPath_Exist(OutCheckedMaxExcelPath)
     # 执行Find_MaxNTl_and_Greater20_Landuse函数
-    # Process_7 = Find_MaxNTl_and_Greater20_Landuse(OutCleanedExcelPath, OutCheckedMaxExcelPath)
+    Process_7 = Find_MaxNTl_and_Greater20_Landuse(OutCleanedExcelPath, OutCheckedMaxExcelPath)
 
     # 自定义Shift_Data_to_CNN_Shape函数的输入参数：
     OutShiftDataCNNExcelPath = os.path.join(Landuse_NTL_ExcelProcess_Folder, f'Landuse_NTL_CNNdata_{BufferSize}')
