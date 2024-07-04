@@ -65,9 +65,9 @@ if __name__ == '__main__':
     rootPath = r'E:/ShanghaiFactory/'
     outPath = r'E:/ShanghaiFactory/Shanghai_Final/'
     # 自定义Extract_Local_Monthly_DNB函数的输入参数：
-    OriginGlobalMonthlyDNB = r'E:/地理数据/年-月合成灯光数据/Global_Monthcomposition/'
+    OriginGlobalMonthlyDNB = os.path.join(rootPath, 'Global_Monthcomposition/')
     AllGDBPath = os.path.join(rootPath, 'SHMonthlyCompositonGDB/')
-    ShapeFilePath = os.path.join(rootPath, '上海基础空间数据/ShanghaiBous.shp')
+    ShapeFilePath = os.path.join(rootPath, 'SHBasicGeoData/ShanghaiBous.shp')
     StartYear = 2014
     EndYear = 2023
     # 执行Extract_Local_Monthly_DNB函数

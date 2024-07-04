@@ -232,7 +232,7 @@ if __name__ == '__main__':
 
     # 自定义Judge_ExtremeNTL函数的输入参数：
     Judge_ExtreNTL_Folder = os.path.join(outPath, 'Step01_Judge_Extreme_NTL/')
-    POIsIndustrialPath = os.path.join(rootPath, '上海基础空间数据/Shanghai_POI_Industrial.shp')
+    POIsIndustrialPath = os.path.join(rootPath, 'SHBasicGeoData/Shanghai_POI_Industrial.shp')
     ProcessGDBPath = os.path.join(rootPath, 'SHMonthlyCompositionGDB_Preprocessed/')
 
     # 存放Buffer之后的excel版本
