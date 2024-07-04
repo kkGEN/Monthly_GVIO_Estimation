@@ -161,7 +161,7 @@ def Shift_Data_to_CNN_Shape(folderpath, outfilepath):
 if __name__ == "__main__":
     outPath = r'E:/ShanghaiFactory/Shanghai_Final/'
     # 自定义Merge_Buf_BufInte_Excel函数的输入参数：
-    BufferSize = '1500 METERS'  # <<Caution!!!>> 缓冲区的距离，这是一个可变参数，可选500m,1000m,1500m,2000m
+    BufferSize = '1000 METERS'  # <<Caution!!!>> 缓冲区的距离，这是一个可变参数，可选500m,1000m,1500m,2000m
     Sumup_Each_Landuse_NTL_Folder = os.path.join(outPath, 'Step02_Sumup_Each_Landuse_NTL/')
     OutInteExcelPath = os.path.join(Sumup_Each_Landuse_NTL_Folder, f'Sumup_Each_Landuse_NTL_BufInte_{BufferSize}')
     OutInteF2PExcelPath = os.path.join(Sumup_Each_Landuse_NTL_Folder, f'Sumup_Each_Landuse_NTL_BufInteF2P_{BufferSize}')

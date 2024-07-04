@@ -229,7 +229,7 @@ if __name__ == '__main__':
     StartYear = 2014
     EndYear = 2023
 
-    BufferSize = '1500 METERS'  # <<Caution!!!>> 缓冲区的距离，这是一个可变参数，可选500m,1000m,1500m,2000m
+    BufferSize = '1000 METERS'  # <<Caution!!!>> 缓冲区的距离，这是一个可变参数，可选500m,1000m,1500m,2000m
 
     # 自定义Judge_ExtremeNTL函数的输入参数：
     Judge_ExtreNTL_Folder = os.path.join(outPath, 'Step01_Judge_Extreme_NTL/')
