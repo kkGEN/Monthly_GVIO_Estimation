@@ -256,7 +256,7 @@ if __name__ == '__main__':
     OutInteF2PExcelPath = os.path.join(Sumup_Each_Landuse_NTL_Folder, f'Sumup_Each_Landuse_NTL_BufInteF2P_{BufferSize}')
     Check_FolderPath_Exist(OutInteF2PExcelPath)
     # 土地利用数据路径
-    EulucPath = os.path.join(rootPath, '上海基础空间数据/Shanghai_Euluc_2018.shp')
+    EulucPath = os.path.join(rootPath, 'SHBasicGeoData/Shanghai_Euluc_2018.shp')
     # 存放Intersect后的GDB路径
     BufferIntersectGDBName = f'Sumup_Each_Landuse_NTL_BufInte_{BufferSize}.gdb'
     outBufferIntersectPath = os.path.join(Sumup_Each_Landuse_NTL_Folder, BufferIntersectGDBName)
