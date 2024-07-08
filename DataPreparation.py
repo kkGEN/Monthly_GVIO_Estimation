@@ -178,20 +178,21 @@ def Read_Xtensors(XFolder, outXTensor):
     # outYTensor：适合网络学习用的tensor形式
 
     files = os.listdir(XFolder)
-    # 定义一个空tensor储存所有月的数据，并将形状预定义为256X180
-    xtensor = torch.empty([0, 1, 256, 180])
+    # 定义一个空tensor储存所有月的数据，并将形状预定义为216*216
+    xtensor = torch.empty([0, 1, 216, 216])
 
     for file in files:
         # 1.读取每月excel中的灯光统计信息为dataframe
-        df_file = pd.read_excel(os.path.join(XFolder, file), header=None)
-        df = df_file.iloc[:, 0:181]  # 读取维度(288,179)
+        df_path = os.path.join(XFolder, file)
+        df_file = pd.read_excel(df_path, header=None)
+        df = df_file.iloc[:, 0:216]  # 读取维度(216,216)
         # 2.将dataframe转换为nparray
         df_arr = df.values
         # 3.使用transforms.ToTensor可以将tensor增加一维，本来主要是用来处理图片
-        trans = transforms.ToTensor()  # 会增加一个维度([1, 289,180])
+        trans = transforms.ToTensor()  # 会增加一个维度([1, 216,216])
         tensor = trans(df_arr)
         # 4.继续给tensor增加维度，为了使其符合卷积的输入要求
-        tensor = tensor.unsqueeze(0)  # 继续增加一维([1, 1, 289,180])
+        tensor = tensor.unsqueeze(0)  # 继续增加一维([1, 1, 216,216])
         # 将每月的数据作为一张灰度图像，即只有一个通道的二维图像，然后拼接为一个
         xtensor = torch.vstack((xtensor, tensor))
     # 将创建的全零向量删除
