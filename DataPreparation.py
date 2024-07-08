@@ -247,7 +247,7 @@ if __name__ == "__main__":
 
     # 自定义Read_Xtensors函数的输入参数：
     XTensorsFolder = OutShiftDataCNNExcelPath
-    XtensorsFilePath = os.path.join(Tensor_Stored_Folder, 'XTensor.pt')
+    XtensorsFilePath = os.path.join(Tensor_Stored_Folder, f'{BufferSize}_XTensor.pt')
     if not os.path.exists(XtensorsFilePath):
         Process_9 = Read_Xtensors(XTensorsFolder, XtensorsFilePath)
     else:
