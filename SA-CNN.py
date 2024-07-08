@@ -115,8 +115,8 @@ def Trian_Modle(train_data_dl, epoch, device):
 def Test_Model(test_dl, y_mean, y_std, device):
     # test_dl: 用于测试的dataloader
     # y_mean，y_std：ytensor的均值和标准差
-    #
 
+    df = pd.DataFrame()
     for batch_idx, (testinputs, targets) in enumerate(test_dl):
         testinputs = testinputs.to(device)
         targets = targets.to(device)
@@ -125,23 +125,21 @@ def Test_Model(test_dl, y_mean, y_std, device):
         real = targets.cpu().numpy() * y_std.numpy() + y_mean.numpy()
         print('prediction number:', pred)
         print('real number:', real)
-        # 预测测试数据效果
-        df = pd.DataFrame()
+        # 将每一个batch的数据装进df中
         df = pd.concat([df, pd.DataFrame(real)], axis=1, ignore_index=True)
         df = pd.concat([df, pd.DataFrame(pred)], axis=1, ignore_index=True)
-        df.columns = ['True', 'Pred']
-        # df.to_excel(CNNresult)
-        x_t = df['True']
-        y_p = df['Pred']
-        sns.regplot(x=x_t, y=y_p, data=df)
-        plt.show()
+    # 预测测试数据效果
+    df.columns = ['True', 'Pred']
+    x_t, y_p = df['True'], df['Pred']
+    sns.regplot(x=x_t, y=y_p, data=df)
+    plt.show()
     return
 
 
 if __name__ == "__main__":
     # 若cuda存在，则将网络放到gpu上运算
     rootPath = r'E:/ShanghaiFactory/Shanghai_Final/'
-    EPOCH = 5000
+    EPOCH = 1000
     BATCH_SIZE = 20
     LR = 0.0001
     BufferSize = '1500 METERS'  # <<Caution!!!>> 缓冲区的距离，这是一个可变参数，可选500m,1000m,1500m,2000m
@@ -162,8 +160,9 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(cnn.parameters(), lr=LR)  # optimize all cnn parameters
     loss_func = nn.MSELoss()  # the target label is not one-hotted
     print('损失函数定义完成！')
-
+    # 定义结果输出路径
+    outCNNResult = os.path.join(rootPath, f'{BufferSize}_Result.xlsx')
     # 开始训练网络
     Trian_Modle(TrainDL, EPOCH, Device)
-    # # 测试网络结果
-    Test_Model(TestDL, YMean, YStd, Device)
+    # 测试网络结果
+    Test_Model(TrainDL, YMean, YStd, Device)
