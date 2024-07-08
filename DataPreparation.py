@@ -3,6 +3,8 @@ import os
 import time
 import pandas as pd
 import numpy as np
+from torchvision import transforms
+import torch
 from concurrent.futures import ProcessPoolExecutor
 
 def Check_FolderPath_Exist(outFolderPath):
@@ -158,6 +160,47 @@ def Shift_Data_to_CNN_Shape(folderpath, outfilepath):
     print("End time is:{}".format(Timestamp()))
     return
 
+def Read_YTensor(inYFile, outYTensor):
+    # 将工业总产值（Y）转换成tensor形式
+    # inYFile: excel形式存储的工业产值
+    # outYTensor：适合网络学习用的tensor形式
+
+    y_df = pd.read_excel(inYFile)
+    y = y_df.iloc[:, 1:2]
+    ytensor = torch.from_numpy(y.values).squeeze()
+    torch.save(ytensor, outYTensor)
+    print('YTensor存储成功！')
+    return
+
+def Read_Xtensors(XFolder, outXTensor):
+    # 将每月的经过处理的灯光矩阵，转换成tensor形式
+    # inYFile: excel形式存储的工业产值
+    # outYTensor：适合网络学习用的tensor形式
+
+    files = os.listdir(XFolder)
+    # 定义一个空tensor储存所有月的数据，并将形状预定义为256X180
+    xtensor = torch.empty([0, 1, 256, 180])
+
+    for file in files:
+        # 1.读取每月excel中的灯光统计信息为dataframe
+        df_file = pd.read_excel(os.path.join(XFolder, file), header=None)
+        df = df_file.iloc[:, 0:181]  # 读取维度(288,179)
+        # 2.将dataframe转换为nparray
+        df_arr = df.values
+        # 3.使用transforms.ToTensor可以将tensor增加一维，本来主要是用来处理图片
+        trans = transforms.ToTensor()  # 会增加一个维度([1, 289,180])
+        tensor = trans(df_arr)
+        # 4.继续给tensor增加维度，为了使其符合卷积的输入要求
+        tensor = tensor.unsqueeze(0)  # 继续增加一维([1, 1, 289,180])
+        # 将每月的数据作为一张灰度图像，即只有一个通道的二维图像，然后拼接为一个
+        xtensor = torch.vstack((xtensor, tensor))
+    # 将创建的全零向量删除
+    xtensor = xtensor.squeeze(0)
+    # 存储tensor
+    torch.save(xtensor, outXTensor)
+    print('XTensor存储成功！')
+    return
+
 if __name__ == "__main__":
     outPath = r'E:/ShanghaiFactory/Shanghai_Final/'
     # 自定义Merge_Buf_BufInte_Excel函数的输入参数：
@@ -198,3 +241,22 @@ if __name__ == "__main__":
     Check_FolderPath_Exist(OutShiftDataCNNExcelPath)
     Process_8 = Shift_Data_to_CNN_Shape(OutCheckedMaxExcelPath, OutShiftDataCNNExcelPath)
 
+    # 定义存储excel文件转tensor的存储位置
+    Tensor_Stored_Folder = os.path.join(outPath, 'Step04_Store_All_Tensors/')
+    Check_FolderPath_Exist(Tensor_Stored_Folder)
+
+    # 自定义Read_Xtensors函数的输入参数：
+    XTensorsFolder = OutShiftDataCNNExcelPath
+    XtensorsFilePath = os.path.join(Tensor_Stored_Folder, 'XTensor.pt')
+    if not os.path.exists(XtensorsFilePath):
+        Process_9 = Read_Xtensors(XTensorsFolder, XtensorsFilePath)
+    else:
+        print('Xtensor is already exist!')
+
+    # 自定义Read_YTensor函数的输入参数：
+    YtensorFilePath = os.path.join(outPath, '工业总产值建模14-22.xlsx')
+    YtensorPath = os.path.join(Tensor_Stored_Folder, 'YTensor.pt')
+    if not os.path.exists(YtensorPath):
+        Process_10 = Read_YTensor(YtensorFilePath, YtensorPath)
+    else:
+        print('Ytensor is already exist!')
