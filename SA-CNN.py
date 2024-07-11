@@ -30,7 +30,7 @@ def Read_tensors(Xtensorpath, Ytensorpath, Batchsize):
     # 归一化Xtensor和Ytensor
     x_mean, x_std = torch.mean(xtensor, dim=0), torch.std(xtensor, dim=0)
     y_mean, y_std = torch.mean(ytensor, dim=0), torch.std(ytensor, dim=0)
-    # x_norm = (xtensor - x_mean) / x_std
+    # x_norm = 1E-06 + ((xtensor - x_mean) / x_std)
     x_norm = xtensor
     y_norm = (ytensor - y_mean) / y_std
 
@@ -112,26 +112,26 @@ def Trian_Modle(train_data_dl, epoch, device):
                 print(f'第{total_train_step}次训练，loss = {loss.item()}')
     return
 
-def Test_Model(test_dl, y_mean, y_std, device):
+def Test_Model(test_dl, y_mean, y_std, outexcel, device):
     # test_dl: 用于测试的dataloader
     # y_mean，y_std：ytensor的均值和标准差
 
-    df = pd.DataFrame()
+    df = pd.DataFrame(columns=['True', 'Pred'])
     for batch_idx, (testinputs, targets) in enumerate(test_dl):
         testinputs = testinputs.to(device)
         targets = targets.to(device)
         testoutput = cnn(testinputs)
         pred = testoutput.data.cpu().numpy().squeeze() * y_std.numpy() + y_mean.numpy()
         real = targets.cpu().numpy() * y_std.numpy() + y_mean.numpy()
-        print('prediction number:', pred)
-        print('real number:', real)
         # 将每一个batch的数据装进df中
-        df = pd.concat([df, pd.DataFrame(real)], axis=1, ignore_index=True)
-        df = pd.concat([df, pd.DataFrame(pred)], axis=1, ignore_index=True)
-    # 预测测试数据效果
-    df.columns = ['True', 'Pred']
-    x_t, y_p = df['True'], df['Pred']
-    sns.regplot(x=x_t, y=y_p, data=df)
+        df_temp = pd.DataFrame({'True': real, 'Pred': pred})
+        df = pd.concat([df, df_temp], axis=0, ignore_index=True)
+    print('Predicted number:', df['Pred'])
+    print('Real number:', df['True'])
+    df.to_excel(outexcel)
+    # 展示测试数据结果
+    x_true, y_pred = df['True'], df['Pred']
+    sns.regplot(x=x_true, y=y_pred)
     plt.show()
     return
 
@@ -139,7 +139,7 @@ def Test_Model(test_dl, y_mean, y_std, device):
 if __name__ == "__main__":
     # 若cuda存在，则将网络放到gpu上运算
     rootPath = r'E:/ShanghaiFactory/Shanghai_Final/'
-    EPOCH = 1000
+    EPOCH = 10000
     BATCH_SIZE = 20
     LR = 0.0001
     BufferSize = '1500 METERS'  # <<Caution!!!>> 缓冲区的距离，这是一个可变参数，可选500m,1000m,1500m,2000m
@@ -152,7 +152,7 @@ if __name__ == "__main__":
 
     # 初始化网络
     cnn = CNN()
-    # 若cuda存在，则将网络放到gpu上运算
+    # 若CUDA存在，则将网络放到GPU上运算
     Device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     cnn = cnn.to(Device)
     print('网络初始化完成！')
@@ -165,4 +165,5 @@ if __name__ == "__main__":
     # 开始训练网络
     Trian_Modle(TrainDL, EPOCH, Device)
     # 测试网络结果
-    Test_Model(TrainDL, YMean, YStd, Device)
+    OutResultExcel = os.path.join(rootPath, f'{BufferSize}_result.xlsx')
+    Test_Model(TestDL, YMean, YStd, OutResultExcel, Device)
