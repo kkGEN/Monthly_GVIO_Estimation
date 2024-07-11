@@ -14,6 +14,12 @@ def Get_File_Path(path, string):
     outpath = os.path.join(path, filepath[0])
     return outpath
 
+def Check_FolderPath_Exist(outFolderPath):
+    if not os.path.exists(outFolderPath):
+        os.makedirs(outFolderPath)
+        print(f'{outFolderPath} is created successflly!')
+    return
+
 def Read_tensors(Xtensorpath, Ytensorpath, Batchsize):
     # 读取xytensor，并完成归一化等预处理，然后使用dataloader操作数据
     # Xtensorpath: xtensor的路径
@@ -175,9 +181,9 @@ def All_Model(all_dl, y_mean, y_std, outexcel, device):
 if __name__ == "__main__":
     # 若cuda存在，则将网络放到gpu上运算
     rootPath = r'E:/ShanghaiFactory/Shanghai_Final/'
-    EPOCH = 10000
+    EPOCH = 20000
     BATCH_SIZE = 20
-    LR = 0.0001
+    LR = 0.00001
     BufferSize = '1500 METERS'  # <<Caution!!!>> 缓冲区的距离，这是一个可变参数，可选500m,1000m,1500m,2000m
 
     # 自定义Read_Tensors函数的输入参数：
@@ -201,12 +207,14 @@ if __name__ == "__main__":
     # 开始训练网络
     Trian_Modle(TrainDL, EPOCH, Device)
     # 定义测试结果输出路径
-    testoutCNNResult = os.path.join(rootPath, f'{BufferSize}_test_Result.xlsx')
+    outResultFolder = os.path.join(rootPath, 'Step05_SA-CNN_Results')
+    Check_FolderPath_Exist(outResultFolder)
+    testoutCNNResult = os.path.join(outResultFolder, f'{BufferSize}_test_Result.xlsx')
     # 测试网络结果
     Test_Model(TestDL, YMean, YStd, testoutCNNResult, Device)
 
     # 定义结果输出路径
-    outCNNResult = os.path.join(rootPath, f'{BufferSize}_Result.xlsx')
+    outCNNResult = os.path.join(outResultFolder, f'{BufferSize}_Result.xlsx')
     # 测试全体数据集结果
     AllDL = Allset_Data_Loader(XNorm, YNorm)  # YMean, YStd, outCNNResult, Device
     All_Model(AllDL, YMean, YStd, outCNNResult, Device)

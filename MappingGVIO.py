@@ -82,7 +82,7 @@ def Relocate_GVIO(estimated_result, maskedgdb, GVIOgdb):
             arcpy.env.overwriteOutput = True
 
             # 重新分配工业产值到每个像素
-            output_raster = con_raster * (total_value * 1000 / raster_sum)
+            output_raster = con_raster * (total_value / raster_sum)
             output_raster_path = os.path.join(GVIOgdb, ras)
             output_raster.save(output_raster_path)
             print('Relocated GVIO of {} is done!'.format(ras))
@@ -109,10 +109,10 @@ if __name__ == "__main__":
     Check_GDBPath_Exist(MaskoutGDBPath, GVIOResultRoot, MaskoutGDBName)  # 检查路径是否存在，不存在则新建
     MaskLayer = os.path.join(basicgeo, 'Shanghai_GVIO_Mask.shp')
     # 执行Mask_Extract函数
-    # Mask_Extract(MaskLayer, InGDBPath, MaskoutGDBPath)
+    Mask_Extract(MaskLayer, InGDBPath, MaskoutGDBPath)
 
     # 设置Relocate_GVIO函数的输入参数
-    outCNNResult = os.path.join(results, f'{BufferSize}_Result.xlsx')
+    outCNNResult = os.path.join(results, f'Step05_SA-CNN_Results/{BufferSize}_Result.xlsx')
     GVIO_GDBName = f'Spatial_GVIO_{BufferSize}.gdb'  # 存放空间化后的GVIO结果
     GVIO_GDBPath = os.path.join(GVIOResultRoot, GVIO_GDBName)
     Check_GDBPath_Exist(GVIO_GDBPath, GVIOResultRoot, GVIO_GDBName)
