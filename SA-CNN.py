@@ -33,7 +33,9 @@ def Read_tensors(Xtensorpath, Ytensorpath, Batchsize):
     # x_norm = 1E-06 + ((xtensor - x_mean) / x_std)
     x_norm = xtensor
     y_norm = (ytensor - y_mean) / y_std
+    return x_norm, y_norm, y_mean, y_std
 
+def Train_Test_Data_Loader(x_norm, y_norm, Batchsize):
     # 数据读进dataloader，方便后续训练
     torch_dataset = TensorDataset(x_norm, y_norm)  # 组成torch专门的数据库
     # 划分训练集测试集与验证集
@@ -42,9 +44,15 @@ def Read_tensors(Xtensorpath, Ytensorpath, Batchsize):
     train_validaion, test = random_split(torch_dataset, [90, 18])
     # 再将训练集划分批次，每batch_size个数据一批（测试集与验证集不划分批次）
     train_data_dl = DataLoader(train_validaion, batch_size=Batchsize, shuffle=True)
-    test_dl = DataLoader(test, batch_size=Batchsize, shuffle=True)
+    test_dl = DataLoader(test, batch_size=Batchsize, shuffle=False)
     print('Dataloader完成！')
-    return train_data_dl, test_dl, y_mean, y_std
+    return train_data_dl, test_dl
+
+def Allset_Data_Loader(x_norm, y_norm):  # y_mean, y_std, outexcel, device
+    # 将整个数据集读进dataloader
+    torch_dataset = TensorDataset(x_norm, y_norm)
+    data_dl = DataLoader(torch_dataset, batch_size=108, shuffle=False)
+    return data_dl
 
 class CNN(nn.Module):
     def __init__(self):
@@ -125,9 +133,37 @@ def Test_Model(test_dl, y_mean, y_std, outexcel, device):
         real = targets.cpu().numpy() * y_std.numpy() + y_mean.numpy()
         # 将每一个batch的数据装进df中
         df_temp = pd.DataFrame({'True': real, 'Pred': pred})
-        df = pd.concat([df, df_temp], axis=0, ignore_index=True)
+        df_temp_cleaned = df_temp.dropna(axis=1, how='all')
+        df = pd.concat([df, df_temp_cleaned], axis=0, ignore_index=True)
     print('Predicted number:', df['Pred'])
     print('Real number:', df['True'])
+    df.to_excel(outexcel)
+    # 展示测试数据结果
+    x_true, y_pred = df['True'], df['Pred']
+    sns.regplot(x=x_true, y=y_pred)
+    plt.show()
+    return
+
+def All_Model(all_dl, y_mean, y_std, outexcel, device):
+    # all_dl: 全体数据的dataloader
+    # y_mean，y_std：ytensor的均值和标准差
+
+    df = pd.DataFrame(columns=['Month', 'True', 'Pred'])
+    for batch_idx, (inputs, targets) in enumerate(all_dl):
+        inputs = inputs.to(device)
+        targets = targets.to(device)
+        testoutput = cnn(inputs)
+        pred = testoutput.data.cpu().numpy().squeeze() * y_std.numpy() + y_mean.numpy()
+        real = targets.cpu().numpy() * y_std.numpy() + y_mean.numpy()
+        # 将每一个batch的数据装进df中
+        df_temp = pd.DataFrame({'True': real, 'Pred': pred})
+        df_temp_cleaned =df_temp.dropna(axis=1, how='all')
+        df = pd.concat([df, df_temp_cleaned], axis=0, ignore_index=True)
+    print('Predicted number:', df['Pred'])
+    print('Real number:', df['True'])
+    # 为每一行增加月份信息
+    date_strings = [f"{Y}{str(M).zfill(2)}" for Y in range(2014, 2023) for M in range(1, 13)]
+    df['Month'] = date_strings
     df.to_excel(outexcel)
     # 展示测试数据结果
     x_true, y_pred = df['True'], df['Pred']
@@ -148,7 +184,8 @@ if __name__ == "__main__":
     Tensor_Stored_Folder = os.path.join(rootPath, 'Step04_Store_All_Tensors/')
     XTensorpath = Get_File_Path(Tensor_Stored_Folder, f'{BufferSize}')
     YTensorpath = Get_File_Path(Tensor_Stored_Folder, 'Y')
-    TrainDL, TestDL, YMean, YStd = Read_tensors(XTensorpath, YTensorpath, BATCH_SIZE)
+    XNorm, YNorm, YMean, YStd = Read_tensors(XTensorpath, YTensorpath, BATCH_SIZE)
+    TrainDL, TestDL = Train_Test_Data_Loader(XNorm, YNorm, BATCH_SIZE)
 
     # 初始化网络
     cnn = CNN()
@@ -160,10 +197,16 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(cnn.parameters(), lr=LR)  # optimize all cnn parameters
     loss_func = nn.MSELoss()  # the target label is not one-hotted
     print('损失函数定义完成！')
-    # 定义结果输出路径
-    outCNNResult = os.path.join(rootPath, f'{BufferSize}_Result.xlsx')
+
     # 开始训练网络
     Trian_Modle(TrainDL, EPOCH, Device)
+    # 定义测试结果输出路径
+    testoutCNNResult = os.path.join(rootPath, f'{BufferSize}_test_Result.xlsx')
     # 测试网络结果
-    OutResultExcel = os.path.join(rootPath, f'{BufferSize}_result.xlsx')
-    Test_Model(TestDL, YMean, YStd, OutResultExcel, Device)
+    Test_Model(TestDL, YMean, YStd, testoutCNNResult, Device)
+
+    # 定义结果输出路径
+    outCNNResult = os.path.join(rootPath, f'{BufferSize}_Result.xlsx')
+    # 测试全体数据集结果
+    AllDL = Allset_Data_Loader(XNorm, YNorm)  # YMean, YStd, outCNNResult, Device
+    All_Model(AllDL, YMean, YStd, outCNNResult, Device)
