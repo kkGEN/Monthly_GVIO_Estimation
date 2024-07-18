@@ -3,11 +3,21 @@ import time
 import arcpy
 import pandas as pd
 import numpy as np
+import functools
 
-def Timestamp():
-    CurrentTime = time.strftime('%Y-%m-%d %H:%M:%S')
-    return CurrentTime
 
+def Time_Decorator(func):
+    # 输出函数运行时间的修饰器
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        start_time_str = time.strftime('%Y-%m-%d %H:%M:%S')
+        print(f'Start_time: {start_time_str}.')
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        print(f'Excution_time: {end_time-start_time}.')
+        return result
+    return wrapper
 def Check_GDBPath_Exist(GDBFullPath, GDBFolder, GDBName):
     # 检查GDB数据库是否存在，若不存在则新建
     if not os.path.exists(GDBFullPath):
@@ -25,14 +35,13 @@ def Check_FolderPath_Exist(outFolderPath):
         print(f'{outFolderPath} is created successflly!')
     return
 
+@Time_Decorator
 def Mask_Extract(inmask, ingdb, resultgdb):
     # Step 1: 利用水体和缓冲区掩膜，将原始的月合成数据进行裁剪
     # inmask：水体和工业用地矢量掩膜
     # ingdb: 预处理后的原始灯光数据库
     # resultgdb：掩膜后的结果数据库
 
-    # 输出函数开始执行时间
-    print("Start time is: {}".format(Timestamp()))
 
     for year in range(2014, 2023):
         arcpy.env.workspace = os.path.join(ingdb, f'{year}.gdb')
@@ -43,18 +52,15 @@ def Mask_Extract(inmask, ingdb, resultgdb):
             outMasked = arcpy.sa.ExtractByMask(Ras, inmask, "INSIDE")
             outMasked.save(os.path.join(resultgdb, ras))
         print('Mask of Shanghai_{} is done!'.format(year))
-    # 输出函数结束时间
-    print("End time is: {}".format(Timestamp()))
+
     return
 
+@Time_Decorator
 def Relocate_GVIO(estimated_result, maskedgdb, GVIOgdb):
     # Step 2: 将预测的工业产值分配到灯光影像上
     # estimated_result: SA-CNN计算得到的最佳GVIO结果
     # maskedgdb：经过掩膜的灯光影像
     # GVIOgdb：存储GVIO空间化后的结果路径
-
-    # 输出函数开始执行时间
-    print("Start time is: {}".format(Timestamp()))
 
     # 读取最佳的GVIO预测结果
     df_estimate = pd.read_excel(estimated_result)
@@ -89,8 +95,6 @@ def Relocate_GVIO(estimated_result, maskedgdb, GVIOgdb):
             # 将工作空间切换回输入灯光数据库
             arcpy.env.workspace = maskedgdb
 
-    # 输出函数结束时间
-    print("End time is: {}".format(Timestamp()))
     return
 
 
